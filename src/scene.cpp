@@ -40,13 +40,13 @@ vec3 blackColour(0,0,0);
 
 // Display everything
 
-void Scene::display() 
+void Scene::display()
 
 {
   mat4 WCS_to_VCS = win->arcball->V;
 
-  mat4 VCS_to_CCS = perspective( win->fovy, 
-				 windowWidth/(float)windowHeight, 
+  mat4 VCS_to_CCS = perspective( win->fovy,
+				 windowWidth/(float)windowHeight,
 				 MAX( 0.1, win->arcball->distToCentre - 100 ),
 				 win->arcball->distToCentre + 100 );
 
@@ -72,9 +72,9 @@ bool Scene::findFirstObjectInt( vec3 rayStart, vec3 rayDir, int thisObjIndex, in
     WavefrontObj* wfo = dynamic_cast<WavefrontObj*>( objects[i] );
 
      // don't check for int with the originating object for non-wavefront objects (since such objects are convex)
-    
+
     if (wfo || i != thisObjIndex) {
-      
+
       vec3 point, normal, texcoords;
       float t;
       Material *intMat;
@@ -124,7 +124,7 @@ bool Scene::findFirstObjectInt( vec3 rayStart, vec3 rayDir, int thisObjIndex, in
 //
 // This returns the colour received on the ray.
 
-vec3 Scene::raytrace( vec3 &rayStart, vec3 &rayDir, int depth, int thisObjIndex, int thisObjPartIndex )
+vec3 Scene::raytrace( vec3 &rayStart, vec3 &rayDir, int depth, int thisObjIndex, int thisObjPartIndex, float w)
 
 {
   // Terminate the ray?
@@ -134,15 +134,45 @@ vec3 Scene::raytrace( vec3 &rayStart, vec3 &rayDir, int depth, int thisObjIndex,
   // Terminate based on depth.  This leads to biased sampling.
   // Disable this section of code once your own Russian Roulette code
   // (below) is ready.
-  
+
   depth++;
 
   if (depth > maxDepth)
     return blackColour;
 
 #else
+  // not sure when bounce occurs exactly
+  // not sure how to terminate exactly
+
+  float wstar=1;
+  float Ew;
+  float p = 0.8;
+  float r = 0.1; // threshold
+
+  wstar = wstar * w;
+
+  if(wstar >= r){
+    w = wstar;
+  }
+  else(
+    //terminate ray probabilistically in HERE
+    // probably done with probability 
+    //w =0;
+    w = (1-p)*(1/(1-p))*wstar + (p*0);
+  )
+
+  //E(w) = 0.2 * (1/(1-p))w* + 0.8 * 0
+  //     = w*
+
+
 
   // YOUR CODE HERE (AND ELSEWHERE!)
+  // basically need to kill ray
+  // need to terminate probabilistically
+  // Iout = Ks Iin
+
+
+  //need to set r value (threshold)
   //
   // Test for ray termination by applying Russian Roulette.
   //
@@ -175,7 +205,7 @@ vec3 Scene::raytrace( vec3 &rayStart, vec3 &rayDir, int depth, int thisObjIndex,
   //        'objIndex' is the index of the object that is hit
   //        'objPartIndex' is the index of the part of object that is hit
   //        'mat' is the material at the intersection point
-  
+
   bool hit = findFirstObjectInt( rayStart, rayDir, thisObjIndex, thisObjPartIndex, P, N, texcoords, t, objIndex, objPartIndex, mat, -1 );
 
   // No intersection: Return background colour
@@ -213,7 +243,7 @@ vec3 Scene::raytrace( vec3 &rayStart, vec3 &rayDir, int depth, int thisObjIndex,
   vec3 Iin = raytrace( P, R, depth, objIndex, objPartIndex );
 
   Iout = Iout + calcIout( N, R, E, E, kd, mat->ks, mat->n, Iin );
-    
+
   // Add contributions from point lights
 
   for (int i=0; i<lights.size(); i++) {
@@ -261,11 +291,11 @@ vec3 Scene::raytrace( vec3 &rayStart, vec3 &rayDir, int depth, int thisObjIndex,
 	// Apply Phong separately to *each* shadow ray that reaches the light.
 	//
 	// Use 'randIn01()' to generate uniform random floats in [0,1].
-	
 
 
 
-	
+
+
 
 
       }
@@ -278,7 +308,7 @@ vec3 Scene::raytrace( vec3 &rayStart, vec3 &rayDir, int depth, int thisObjIndex,
 
 // Calculate the outgoing intensity due to light Iin entering from
 // direction L and exiting to direction E, with normal N.  Reflection
-// direction R is provided, along with the material properties Kd, 
+// direction R is provided, along with the material properties Kd,
 // Ks, and n.
 //
 //       Iout = Iin * ( Kd (N.L) + Ks (R.V)^n )
@@ -337,11 +367,11 @@ vec3 Scene::pixelColour( int x, int y )
   // Antialias through a pixel using ('numPixelSamples' x 'numPixelSamples')
   // rays.  Use a regular pattern in the subpixel centres if 'jitter'
   // is false; use a jittered patter if 'jitter' is true.
-  
 
 
 
-  
+
+
 #endif
 
 
@@ -370,7 +400,7 @@ void Scene::read( const char *basename, istream &in )
     in >> command;
     if (!in || command[0] == '\0')
       break;
-    
+
     skipComments( in );
 
     if (strcmp(command,"sphere") == 0) {
@@ -378,19 +408,19 @@ void Scene::read( const char *basename, istream &in )
       Sphere *o = new Sphere();
       in >> *o;
       objects.add( o );
-      
+
     } else if (strcmp(command,"triangle") == 0) {
 
       Triangle *o = new Triangle();
       in >> *o;
       objects.add( o );
-      
+
     } else if (strcmp(command,"material") == 0) {
 
       Material *m = new Material();
       in >> *m;
       materials.add( m );
-      
+
     } else if (strcmp(command,"wavefront") == 0) {
 
       // Rely on the wavefront.cpp code to read this
@@ -408,13 +438,13 @@ void Scene::read( const char *basename, istream &in )
 
       if (o->obj->radius/2 > sceneScale)
 	sceneScale = o->obj->radius/2;
-      
+
     } else if (strcmp(command,"light") == 0) {
 
       Light *o = new Light();
       in >> *o;
       lights.add( o );
-      
+
     } else if (strcmp(command,"eye") == 0) {
 
       eye = new Eye();
@@ -422,9 +452,9 @@ void Scene::read( const char *basename, istream &in )
 
       win->arcball->setV( eye->position, eye->lookAt, eye->upDir );
       win->fovy = eye->fovy;
-      
+
     } else {
-      
+
       cerr << "Command '" << command << "' not recognized" << endl;
       exit(-1);
     }
@@ -481,8 +511,8 @@ void Scene::renderRT( bool restart )
 
   mat4 WCS_to_VCS = win->arcball->V;
 
-  mat4 VCS_to_CCS = perspective( win->fovy, 
-				 windowWidth/(float)windowHeight, 
+  mat4 VCS_to_CCS = perspective( win->fovy,
+				 windowWidth/(float)windowHeight,
 				 1, 1000 );
 
   if (restart) {
@@ -519,7 +549,7 @@ void Scene::renderRT( bool restart )
     stop = false;
 
     // Clear the RT image
-    
+
     if (rtImage != NULL)
       delete [] rtImage;
 
@@ -556,7 +586,7 @@ void Scene::renderRT( bool restart )
       draw_RT_and_GL( WCS_to_VCS, VCS_to_CCS );
 
     }
-    
+
     if (nextx >= windowWidth) { // finished
 
       draw_RT_and_GL( WCS_to_VCS, VCS_to_CCS );
@@ -588,9 +618,9 @@ void Scene::renderGL( mat4 &WCS_to_VCS, mat4 &VCS_to_CCS )
     segs = new Segs();
 
   vec3 lightDir = vec3(1,1,1).normalize();
-  
+
   // Set up the framebuffer
- 
+
   glEnable( GL_DEPTH_TEST );
   glClearColor( backgroundColour.x, backgroundColour.y, backgroundColour.z, 0 );
   glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
@@ -613,7 +643,7 @@ void Scene::renderGL( mat4 &WCS_to_VCS, mat4 &VCS_to_CCS )
 
   wavefrontGPU->setVec3( "lightIin", lightIin, MAX_NUM_LIGHTS );
   wavefrontGPU->setVec3( "lightPos", lightPos, MAX_NUM_LIGHTS );
-  
+
   wavefrontGPU->setInt( "numLights", 1 );
 
   // Ambient lighting
@@ -624,7 +654,7 @@ void Scene::renderGL( mat4 &WCS_to_VCS, mat4 &VCS_to_CCS )
 
   for (int i=0; i<lights.size(); i++)
     lights[i]->draw( wavefrontGPU, WCS_to_VCS, VCS_to_CCS, lightDir );
-      
+
   // Draw any stored rays (for debugging)
 
   drawStoredRays( wavefrontGPU, WCS_to_VCS, VCS_to_CCS );
@@ -649,9 +679,9 @@ void Scene::renderGL( mat4 &WCS_to_VCS, mat4 &VCS_to_CCS )
 
   wavefrontGPU->setVec3( "lightIin", lightIin, MAX_NUM_LIGHTS );
   wavefrontGPU->setVec3( "lightPos", lightPos, MAX_NUM_LIGHTS );
-  
+
   wavefrontGPU->setInt( "numLights", numLights );
-  
+
   // Now draw everything
 
   if (showObjects)
@@ -659,7 +689,7 @@ void Scene::renderGL( mat4 &WCS_to_VCS, mat4 &VCS_to_CCS )
       objects[i]->renderGL( wavefrontGPU, WCS_to_VCS, VCS_to_CCS );
 
   // Show status message
-      
+
   render_text( statusMessage(), 10, 10, win->window );
 
   // Done
@@ -679,7 +709,7 @@ void Scene::drawStoredRays( GPUProgram *gpuProg, mat4 &WCS_to_VCS, mat4 &VCS_to_
 
 {
   if (storedRays.size() > 0) {
-        
+
     if (arrow == NULL)
       arrow = new Arrow();
 
@@ -690,7 +720,7 @@ void Scene::drawStoredRays( GPUProgram *gpuProg, mat4 &WCS_to_VCS, mat4 &VCS_to_
 
       arrow->mat->kd = storedRayColours[i/2];
 
-      arrow->draw( gpuProg, OCS_to_WCS, WCS_to_VCS, VCS_to_CCS, 
+      arrow->draw( gpuProg, OCS_to_WCS, WCS_to_VCS, VCS_to_CCS,
 		           (i == 0 ? 0.25 : 1.0) * dir.length(), // first ray (going back to eye) is shorter
 		           sceneScale*BASE_ARROW_RADIUS );
     }
@@ -711,7 +741,7 @@ void Scene::draw_RT_and_GL( mat4 &WCS_to_VCS, mat4 &VCS_to_CCS )
   // Redraw the stored rays and lights over top of the RT image
 
   wavefrontGPU->activate();
-  
+
   // Need "headlights" to illuminate non-scene items
 
   vec3 lightPos[MAX_NUM_LIGHTS] = { vec3(0,0,0) }; // light is at eye position
@@ -719,7 +749,7 @@ void Scene::draw_RT_and_GL( mat4 &WCS_to_VCS, mat4 &VCS_to_CCS )
 
   wavefrontGPU->setVec3( "lightIin", lightIin, MAX_NUM_LIGHTS );
   wavefrontGPU->setVec3( "lightPos", lightPos, MAX_NUM_LIGHTS );
-  
+
   wavefrontGPU->setInt( "numLights", 1 );
 
   vec3 lightDir = vec3(1,1,1).normalize(); // only for OpenGL rendering
@@ -728,7 +758,7 @@ void Scene::draw_RT_and_GL( mat4 &WCS_to_VCS, mat4 &VCS_to_CCS )
                                               // previously-drawn arrow at this location (depth-buffer issue)
   for (int i=0; i<lights.size(); i++)
     lights[i]->draw( wavefrontGPU, WCS_to_VCS, VP, lightDir );
-  
+
   drawStoredRays( wavefrontGPU, WCS_to_VCS, VP );
 
   wavefrontGPU->deactivate();
@@ -783,7 +813,7 @@ void Scene::drawRTImage()
     vec2( -1, -1 ), vec2( -1, 1 ), vec2( 1, -1 ), vec2( 1, 1 ), // positions
     vec2(  0,  0 ), vec2(  0, 1 ), vec2( 1,  0 ), vec2( 1, 1 )  // texture coordinates
   };
-    
+
   GLuint VAO, VBO;
 
   glGenVertexArrays( 1, &VAO );
@@ -949,7 +979,7 @@ const char* Scene::wavefrontFragmentShader = R"(
 
     for (int i=0; i<numLights; i++) { // add contribution from each (positional) light
 
-      mediump vec3 L = normalize( lightPos[i] - position );      
+      mediump vec3 L = normalize( lightPos[i] - position );
 
       mediump float NdotL = dot( N, L );
 
@@ -983,5 +1013,3 @@ const char* Scene::wavefrontFragmentShader = R"(
     outputColour = vec4( Iout, 1.0 );
   }
 )";
-
-
