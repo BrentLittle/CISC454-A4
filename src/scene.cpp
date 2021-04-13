@@ -1,4 +1,4 @@
-// scene.cpp
+ // scene.cpp
 
 
 #include "headers.h"
@@ -140,48 +140,61 @@ vec3 Scene::raytrace( vec3 &rayStart, vec3 &rayDir, int depth, int thisObjIndex,
   if (depth > maxDepth)
     return blackColour;
 
+// YOUR CODE HERE (AND ELSEWHERE!)
+// basically need to kill ray
+// need to terminate probabilistically
+// Iout = Ks Iin
+
+
+//need to set r value (threshold)
+//
+// Test for ray termination by applying Russian Roulette.
+//
+// Modify the raytrace() parameters to include the accumulated
+// weight of the ray.  You'll have to modify every occurrence of
+// raytrace() in the code.
+//
+// Apply Russian Roulette to a ray if appropriate and, if the ray
+// survives, give it more weight.
+
 #else
   // not sure when bounce occurs exactly
   // not sure how to terminate exactly
 
   float wstar=1;
+  float ran;
   float Ew;
   float p = 0.8;
   float r = 0.1; // threshold
 
-  wstar = wstar * w;
+  //wstar = wstar * w;
+  ran = randIn01();
+  //wstar = calcIout(N, R, E, E, kd, mat->ks, mat->n, Iin);
+  //wstar should be *'d by k every iteration.
+  // idk what k is right now
+  wstar = wstar*(calcIout(N, R, E, E, kd, mat->ks, mat->n, Iin)/Iin);
 
   if(wstar >= r){
     w = wstar;
   }
   else(
+
     //terminate ray probabilistically in HERE
-    // probably done with probability 
+    // probably done with probability
     //w =0;
-    w = (1-p)*(1/(1-p))*wstar + (p*0);
+    //p = 0.8
+
+    if(ran <= p){
+      // do operation
+      w = (1/(1-p))*wstar;
+    }
+    else{
+      //terminate ray
+      w = 0;
+      return blackColour;
+    }
+
   )
-
-  //E(w) = 0.2 * (1/(1-p))w* + 0.8 * 0
-  //     = w*
-
-
-
-  // YOUR CODE HERE (AND ELSEWHERE!)
-  // basically need to kill ray
-  // need to terminate probabilistically
-  // Iout = Ks Iin
-
-
-  //need to set r value (threshold)
-  //
-  // Test for ray termination by applying Russian Roulette.
-  //
-  // Modify the raytrace() parameters to include the accumulated
-  // weight of the ray.  You'll have to modify every occurrence of
-  // raytrace() in the code.
-  //
-  // Apply Russian Roulette to a ray if appropriate and, if the ray
-  // survives, give it more weight.
 
 #endif
 
@@ -367,10 +380,34 @@ vec3 Scene::pixelColour( int x, int y )
   // Antialias through a pixel using ('numPixelSamples' x 'numPixelSamples')
   // rays.  Use a regular pattern in the subpixel centres if 'jitter'
   // is false; use a jittered patter if 'jitter' is true.
+  float step;
+  vec3 dir;
+  float xa;
+  float ya;
+  float za;
+  vec3 endDir;
+  vec3 result;
 
+  if(jitter==false){
+    step=0.25;
+  }
+  else{
+    step =0.3; //gonna random it later
+  }
+  
+  for(int i=0;i<=numPixelSamples;i+=step){
+    for(int j=0;j<=numPixelSamples;j+=step){
+      vec3 dir = (llCorner + (x+i)*right + (y+j)*up).normalize();
+      xa+=dir.x;
+      ya+=dir.y;
+      za+=dir.z;
+    }
+  }
+  endDir.x = xa/numPixelSamples^2;
+  endDir.y = ya/numPixelSamples^2;
+  endDir.z = za/numPixelSamples^2;
 
-
-
+  result = raytrace( eye->position, endDir, 0, -1, -1 );
 
 #endif
 
